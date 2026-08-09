@@ -1,0 +1,76 @@
+services:
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: bankcomplaint-sqlserver
+
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: ${SQL_SERVER_PASSWORD}
+
+    ports:
+      - "1433:1433"
+
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+
+    networks:
+      - bank-network
+
+
+  api:
+    image: bankcomplaint-api:latest
+    container_name: bankcomplaint-api
+
+    depends_on:
+      - sqlserver
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+
+      ConnectionStrings__DefaultConnection: >
+        Server=sqlserver;
+        Database=${SQL_DATABASE};
+        User Id=sa;
+        Password=${SQL_SERVER_PASSWORD};
+        TrustServerCertificate=True;
+
+      JwtSettings__SecretKey: ${JWT_SECRET}
+      JwtSettings__Issuer: ${JWT_ISSUER}
+      JwtSettings__Audience: ${JWT_AUDIENCE}
+      JwtSettings__ExpirationMinutes: ${JWT_EXPIRATION}
+
+      AdminSettings__FirstName: ${ADMIN_FIRSTNAME}
+      AdminSettings__LastName: ${ADMIN_LASTNAME}
+      AdminSettings__Email: ${ADMIN_EMAIL}
+      AdminSettings__Password: ${ADMIN_PASSWORD}
+
+    networks:
+      - bank-network
+
+
+  frontend:
+    image: bank-complaint-frontend
+    container_name: bankcomplaint-frontend
+
+    ports:
+      - "4200:80"
+
+    depends_on:
+      - api
+
+    networks:
+      - bank-network
+
+
+volumes:
+  sqlserver-data:
+
+
+networks:
+  bank-network:
+    driver: bridge
