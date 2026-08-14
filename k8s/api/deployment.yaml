@@ -21,7 +21,7 @@ spec:
       containers:
         - name: api
 
-          image: bankcomplaint-api:v2
+          image: bankcomplaint-api:v3
           imagePullPolicy: IfNotPresent
 
           ports:
