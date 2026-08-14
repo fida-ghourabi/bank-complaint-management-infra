@@ -1,0 +1,177 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: api
+  namespace: bank-complaint
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: api
+
+  template:
+    metadata:
+      labels:
+        app: api
+
+    spec:
+      containers:
+        - name: api
+
+          image: bankcomplaint-api:v2
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 8080
+
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          env:
+
+            # --------------------------------
+            # Values from ConfigMap
+            # --------------------------------
+
+            - name: ASPNETCORE_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: ASPNETCORE_ENVIRONMENT
+
+            - name: ASPNETCORE_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: ASPNETCORE_URLS
+
+            - name: SQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: SQL_DATABASE
+
+            - name: JWT_ISSUER
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: JWT_ISSUER
+
+            - name: JWT_AUDIENCE
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: JWT_AUDIENCE
+
+            - name: JWT_EXPIRATION
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: JWT_EXPIRATION
+
+            - name: ADMIN_FIRSTNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: ADMIN_FIRSTNAME
+
+            - name: ADMIN_LASTNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: ADMIN_LASTNAME
+
+            - name: ADMIN_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: ADMIN_EMAIL
+
+            # --------------------------------
+            # Values from Secret
+            # --------------------------------
+
+            - name: SQL_SERVER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: SQL_SERVER_PASSWORD
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: JWT_SECRET
+
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: ADMIN_PASSWORD
+
+            # --------------------------------
+            # .NET Connection String
+            # --------------------------------
+
+            - name: ConnectionStrings__DefaultConnection
+              value: "Server=sqlserver,1433;Database=$(SQL_DATABASE);User Id=sa;Password=$(SQL_SERVER_PASSWORD);TrustServerCertificate=True;"
+
+            # --------------------------------
+            # .NET JWT configuration
+            # --------------------------------
+
+            - name: JwtSettings__SecretKey
+              value: "$(JWT_SECRET)"
+
+            - name: JwtSettings__Issuer
+              value: "$(JWT_ISSUER)"
+
+            - name: JwtSettings__Audience
+              value: "$(JWT_AUDIENCE)"
+
+            - name: JwtSettings__ExpirationMinutes
+              value: "$(JWT_EXPIRATION)"
+
+            # --------------------------------
+            # .NET Admin configuration
+            # --------------------------------
+
+            - name: AdminSettings__FirstName
+              value: "$(ADMIN_FIRSTNAME)"
+
+            - name: AdminSettings__LastName
+              value: "$(ADMIN_LASTNAME)"
+
+            - name: AdminSettings__Email
+              value: "$(ADMIN_EMAIL)"
+
+            - name: AdminSettings__Password
+              value: "$(ADMIN_PASSWORD)"

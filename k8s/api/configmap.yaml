@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: api-config
+  namespace: bank-complaint
+
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_URLS: "http://+:8080"
+
+  SQL_DATABASE: "BankComplaintManagementDb"
+
+  JWT_ISSUER: "BankComplaintManagementAPI"
+  JWT_AUDIENCE: "BankComplaintManagementClient"
+  JWT_EXPIRATION: "60"
+
+  ADMIN_FIRSTNAME: "System"
+  ADMIN_LASTNAME: "Administrator"
+  ADMIN_EMAIL: "admin@bank.com"
