@@ -1,4 +1,7 @@
 .env
 
 # Kubernetes secrets
-k8s/**/secret.yamlbackup-k8s/sqlserver/*.bak
+k8s/**/secret.yaml
+
+# Local Kubernetes backups
+backup-k8s/
