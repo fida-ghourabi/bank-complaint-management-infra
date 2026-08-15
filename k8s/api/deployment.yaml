@@ -18,8 +18,22 @@ spec:
         app: api
 
     spec:
+
+      automountServiceAccountToken: false
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1654
+        runAsGroup: 1654
+
       containers:
         - name: api
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
 
           image: bankcomplaint-api:v3
           imagePullPolicy: IfNotPresent
@@ -175,3 +189,4 @@ spec:
 
             - name: AdminSettings__Password
               value: "$(ADMIN_PASSWORD)"
+
