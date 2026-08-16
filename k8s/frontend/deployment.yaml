@@ -16,9 +16,11 @@ spec:
 
       automountServiceAccountToken: false
 
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: frontend
-          image: bank-complaint-frontend:v5
+          image: ghcr.io/fida-ghourabi/bank-complaint-management-frontend:53fcbf656463b8eaf62a77a866d58d02c68aeee6
           imagePullPolicy: IfNotPresent
 
           securityContext:
