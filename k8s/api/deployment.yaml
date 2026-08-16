@@ -21,6 +21,9 @@ spec:
 
       automountServiceAccountToken: false
 
+      imagePullSecrets:
+        - name: ghcr-secret
+
       securityContext:
         runAsNonRoot: true
         runAsUser: 1654
@@ -35,7 +38,7 @@ spec:
               drop:
                 - ALL
 
-          image: bankcomplaint-api:v3
+          image: ghcr.io/fida-ghourabi/bank-complaint-management-backend:f3a740bde4be3ed11c7063f80bb84b097db41482
           imagePullPolicy: IfNotPresent
 
           ports:
