@@ -1,0 +1,65 @@
+name: Backend CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Backend image tag to deploy"
+        required: true
+        type: string
+
+env:
+  IMAGE_NAME: ghcr.io/fida-ghourabi/bank-complaint-management-backend
+  NAMESPACE: bank-complaint
+  DEPLOYMENT: api
+  CONTAINER: api
+
+jobs:
+  deploy:
+    name: Deploy Backend to Kubernetes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout infra repository
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
+
+      - name: Configure Kubernetes
+        run: |
+          echo "Kubernetes deployment will be configured here"name: Backend CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Backend image tag to deploy"
+        required: true
+        type: string
+
+env:
+  IMAGE_NAME: ghcr.io/fida-ghourabi/bank-complaint-management-backend
+  NAMESPACE: bank-complaint
+  DEPLOYMENT: api
+  CONTAINER: api
+
+jobs:
+  deploy:
+    name: Deploy Backend to Kubernetes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout infra repository
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
+
+      - name: Configure Kubernetes
+        run: |
+          echo "Kubernetes deployment will be configured here"
