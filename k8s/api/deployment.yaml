@@ -28,6 +28,7 @@ spec:
         runAsNonRoot: true
         runAsUser: 1654
         runAsGroup: 1654
+        fsGroupChangePolicy: OnRootMismatch
 
       containers:
         - name: api
@@ -44,6 +45,10 @@ spec:
           ports:
             - containerPort: 8080
 
+
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
 
           resources:
             requests:
@@ -201,3 +206,10 @@ spec:
             - name: AdminSettings__Password
               value: "$(ADMIN_PASSWORD)"
 
+      # --------------------------------
+      # Uploads volume
+      # --------------------------------
+
+      volumes:
+        - name: uploads
+          emptyDir: {}
