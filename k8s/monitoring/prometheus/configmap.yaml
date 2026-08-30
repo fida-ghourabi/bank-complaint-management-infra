@@ -55,3 +55,55 @@ data:
             action: replace
             target_label: __metrics_path__
             regex: (.+)
+
+          # Conserver les informations Kubernetes
+          - source_labels:
+              - __meta_kubernetes_namespace
+            action: replace
+            target_label: namespace
+
+          - source_labels:
+              - __meta_kubernetes_pod_name
+            action: replace
+            target_label: pod
+
+          - source_labels:
+              - __meta_kubernetes_pod_container_name
+            action: replace
+            target_label: container
+
+          # Récupérer le label Kubernetes app
+          - source_labels:
+              - __meta_kubernetes_pod_label_app
+            action: replace
+            target_label: app
+
+      # Node Exporter - métriques des nœuds Kubernetes
+      - job_name: node-exporter
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - monitoring
+
+        relabel_configs:
+
+          # Scraper uniquement les Pods Node Exporter
+          - source_labels:
+              - __meta_kubernetes_pod_label_app
+            action: keep
+            regex: node-exporter
+
+          # Utiliser automatiquement le port 9100
+          - source_labels:
+              - __address__
+            action: replace
+            regex: ([^:]+)(?::\d+)?
+            replacement: $1:9100
+            target_label: __address__
+
+          # Ajouter le nom du nœud Kubernetes
+          - source_labels:
+              - __meta_kubernetes_pod_node_name
+            action: replace
+            target_label: node

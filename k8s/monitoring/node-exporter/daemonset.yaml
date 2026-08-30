@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: monitoring
+  labels:
+    app: node-exporter
+spec:
+  selector:
+    matchLabels:
+      app: node-exporter
+
+  template:
+    metadata:
+      labels:
+        app: node-exporter
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9100"
+        prometheus.io/path: "/metrics"
+
+    spec:
+      hostNetwork: true
+      hostPID: true
+
+      containers:
+        - name: node-exporter
+          image: prom/node-exporter:v1.9.1
+          args:
+            - --path.rootfs=/host
+
+          ports:
+            - name: metrics
+              containerPort: 9100
+              hostPort: 9100
+
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+
+          volumeMounts:
+            - name: root
+              mountPath: /host
+              readOnly: true
+
+      volumes:
+        - name: root
+          hostPath:
+            path: /
