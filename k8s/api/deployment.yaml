@@ -42,7 +42,7 @@ spec:
               drop:
                 - ALL
 
-          image: ghcr.io/fida-ghourabi/bank-complaint-management-backend:b8da077763c14bde42d8a1def2aa5180db27ab41
+          image: ghcr.io/fida-ghourabi/bank-complaint-management-backend:416bc849ea6dabe27425ba27b145fbf0323d17d2
           imagePullPolicy: IfNotPresent
 
           ports:
