@@ -5,6 +5,8 @@ metadata:
   namespace: monitoring
   labels:
     app: grafana
+  annotations:
+    gitops-test: "true"
 
 spec:
   replicas: 1
