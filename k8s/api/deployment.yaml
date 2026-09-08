@@ -215,4 +215,5 @@ spec:
 
       volumes:
         - name: uploads
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: api-uploads
