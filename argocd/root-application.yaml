@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: bank-complaint-frontend
+  name: bank-complaint-root
   namespace: argocd
 spec:
   project: default
@@ -9,11 +9,11 @@ spec:
   source:
     repoURL: https://github.com/fida-ghourabi/bank-complaint-management-infra.git
     targetRevision: main
-    path: k8s/frontend
+    path: argocd/apps
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: bank-complaint
+    namespace: argocd
 
   syncPolicy:
     automated:
