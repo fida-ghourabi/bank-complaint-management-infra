@@ -20,7 +20,7 @@ spec:
         - name: ghcr-secret
       containers:
         - name: frontend
-          image: ghcr.io/fida-ghourabi/bank-complaint-management-frontend:e1e3cebaca8c912b43a6bd769fc38b74c6bd7494
+          image: ghcr.io/fida-ghourabi/bank-complaint-management-frontend:0b586be85f3a0f5a197fe49b4d0de62b125477ed
           imagePullPolicy: IfNotPresent
 
           securityContext:
