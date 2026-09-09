@@ -34,6 +34,12 @@ Ce depot contient les manifests Kubernetes, la configuration GitOps Argo CD, les
 | Stockage | PersistentVolumeClaims Kubernetes |
 | Cluster local | Minikube avec driver Docker et CNI Calico |
 
+## Application deployee
+
+L'application est accessible localement via l'Ingress Kubernetes a l'adresse `http://bank-complaint.local`. La capture suivante montre l'ecran de creation d'une nouvelle reclamation apres le deploiement de la plateforme.
+
+![Application Bank Complaint Management deployee](docs/images/application-deployed.png)
+
 ## Architecture complete du cluster Kubernetes
 
 Le diagramme ci-dessous presente la structure logique du cluster, les namespaces, les workloads Kubernetes, les Services, les volumes et les flux GitOps et d'observabilite. Le nombre de noeuds du cluster depend de l'environnement d'execution et n'est pas impose par ce repository.
@@ -787,6 +793,12 @@ This repository contains the Kubernetes manifests, Argo CD GitOps configuration,
 | Configuration | Kubernetes ConfigMaps and Secrets |
 | Storage | Kubernetes PersistentVolumeClaims |
 | Local cluster | Minikube with Docker driver and Calico CNI |
+
+## Deployed Application
+
+The application is locally accessible through the Kubernetes Ingress at `http://bank-complaint.local`. The following screenshot shows the new complaint creation screen after the platform deployment.
+
+![Deployed Bank Complaint Management application](docs/images/application-deployed.png)
 
 ## Complete Kubernetes Cluster Architecture
 
