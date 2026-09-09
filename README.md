@@ -16,6 +16,24 @@ Ce depot contient les manifests Kubernetes, la configuration GitOps Argo CD, les
 
 ## Stack technologique
 
+| Domaine | Technologies utilisees |
+| --- | --- |
+| Orchestration | Kubernetes |
+| GitOps | Argo CD |
+| CI/CD applicatif | GitHub Actions |
+| Images de conteneurs | Docker, GitHub Container Registry (GHCR) |
+| Frontend | Application frontend conteneurisee, servie par un conteneur web |
+| Backend | .NET 9, ASP.NET Core, API conteneurisee |
+| Base de donnees | Microsoft SQL Server 2019 |
+| Routage | Kubernetes Ingress avec NGINX |
+| Metriques | Prometheus, kube-state-metrics, Node Exporter |
+| Dashboards | Grafana |
+| Logs | Loki, Grafana Alloy |
+| Traces | Tempo, OpenTelemetry OTLP |
+| Configuration | ConfigMaps et Secrets Kubernetes |
+| Stockage | PersistentVolumeClaims Kubernetes |
+| Cluster local | Minikube avec driver Docker et CNI Calico |
+
 ## Architecture complete du cluster Kubernetes
 
 Le diagramme ci-dessous presente la structure logique du cluster, les namespaces, les workloads Kubernetes, les Services, les volumes et les flux GitOps et d'observabilite. Le nombre de noeuds du cluster depend de l'environnement d'execution et n'est pas impose par ce repository.
@@ -102,7 +120,8 @@ flowchart TB
     api_svc --> api_dep --> api_rs --> api_pods
     hpa -. scale 2 a 5 .-> api_dep
     api_pods --> uploads
-    api_pods -->|TCP 1433| sql_svc --> sql_dep --> sql_pod --> sql_pvc
+    api_pods -->|TCP 1433| sql_svc
+    sql_svc --> sql_dep --> sql_pod --> sql_pvc
     config -. injecte la configuration .-> api_pods
     policies -. autorise et limite les flux .-> application
 
@@ -118,6 +137,38 @@ flowchart TB
     loki --> obs_storage
     tempo --> obs_storage
 ```
+
+### Vue simple du cluster applicatif
+
+Ce schema montre uniquement les composants reels deployes dans le namespace `bank-complaint`, sans detailler les objets Kubernetes intermediaires :
+
+```mermaid
+flowchart LR
+    user[Utilisateur]
+    loadbalancer[NGINX Ingress Controller<br/>Service LoadBalancer]
+    ingress[Ingress<br/>bank-complaint.local]
+    frontend[Service frontend<br/>ClusterIP :80]
+    frontend_pods[2 Pods frontend]
+    api[Service api<br/>ClusterIP :8080]
+    api_pods[2 Pods API .NET 9]
+    sql[Service sqlserver<br/>ClusterIP :1433]
+    sql_pod[1 Pod SQL Server 2019]
+    sql_storage[PVC sqlserver-pvc<br/>SQL Server data]
+    uploads_storage[PVC api-uploads<br/>API uploads]
+    monitoring[Monitoring<br/>Prometheus, Grafana, Loki, Tempo, Alloy]
+
+    user --> loadbalancer --> ingress
+    ingress -->|/| frontend
+    ingress -->|/api| api
+    frontend --> frontend_pods
+    api --> api_pods
+    api_pods -->|TCP 1433| sql --> sql_pod
+    sql_pod --> sql_storage
+    api_pods --> uploads_storage
+    api_pods -. metriques, logs, traces .-> monitoring
+```
+
+Cette vue resume la topologie actuelle : **2 Pods frontend**, **2 Pods API** et **1 Pod SQL Server**. Le HPA peut augmenter le nombre de Pods API jusqu'a 5 selon l'utilisation CPU ; les deux Pods API representent donc l'etat initial declare par le Deployment.
 
 ### Detail des flux d'observabilite
 
@@ -178,44 +229,78 @@ Cluster Kubernetes
 
 Cette organisation separe clairement le plan applicatif, la plateforme d'observabilite et le controle GitOps. Les Pods sont geres par leurs Deployments ou DaemonSets, les Services fournissent la decouverte reseau interne et les PVC assurent la persistance declaree.
 
-	deployment --> replicaset --> pod --> container
-	service --> pod
-	ingress --> service
-	pod --> pvc --> storage
+### Hierarchie des ressources Kubernetes
+
+Dans Kubernetes, chaque objet a une responsabilite differente :
+
+| Objet | Role dans ce projet |
+| --- | --- |
+| Ingress | Recoit les requetes HTTP et choisit le Service cible selon le chemin `/` ou `/api`. |
+| Service | Fournit une adresse reseau stable aux Pods. Les Services applicatifs sont de type `ClusterIP`. |
+| Deployment | Declare le nombre souhaite de replicas et gere les mises a jour des Pods. |
+| ReplicaSet | Cree et maintient le nombre de Pods demande par un Deployment. |
+| Pod | Execute le conteneur frontend, API ou SQL Server. |
+| PVC | Demande du stockage persistant pour SQL Server ou les uploads de l'API. |
+| HPA | Ajuste automatiquement le nombre de Pods API entre 2 et 5 selon le CPU. |
+
+```mermaid
+flowchart TB
+    ingress[Ingress bank-complaint-ingress]
+    frontend_service[Service frontend<br/>ClusterIP :80]
+    frontend_deployment[Deployment frontend<br/>2 replicas]
+    frontend_pods[2 Pods frontend]
+    api_service[Service api<br/>ClusterIP :8080]
+    api_deployment[Deployment api<br/>2 replicas initiales]
+    api_pods[2 Pods API]
+    sql_service[Service sqlserver<br/>ClusterIP :1433]
+    sql_deployment[Deployment sqlserver<br/>1 replica]
+    sql_pod[1 Pod SQL Server]
+    sql_pvc[PVC sqlserver-pvc]
+    uploads_pvc[PVC api-uploads]
+
+    ingress -->|/| frontend_service --> frontend_deployment --> frontend_pods
+    ingress -->|/api| api_service --> api_deployment --> api_pods
+    api_pods -->|connexion SQL| sql_service --> sql_deployment --> sql_pod --> sql_pvc
+    api_pods --> uploads_pvc
 ```
 
-Dans ce projet, le frontend et l'API suivent la chaine `Deployment -> Pods -> Service`, puis l'Ingress route les requetes HTTP vers le Service correspondant. SQL Server ajoute une chaine de persistance `Pod -> PVC -> stockage`. L'API dispose en plus d'un HPA qui peut faire varier son nombre de replicas entre 2 et 5 selon l'utilisation CPU.
+La lecture du diagramme se fait de haut en bas : l'Ingress route vers un Service, le Service cible un Deployment, le Deployment gere les Pods, et les Pods utilisent les PVC lorsqu'ils ont besoin de stockage persistant. Le frontend et l'API ont chacun 2 Pods au demarrage ; SQL Server a 1 Pod ; l'API peut ensuite etre augmentee jusqu'a 5 Pods par le HPA.
 
 ### Flux reseau et observabilite
 
 ```mermaid
 flowchart LR
-	client[Client]
+    client[Client]
     nginx[NGINX Ingress Controller<br/>Service LoadBalancer]
-	frontend[Frontend Service :80]
-	api[API Service :8080]
-	sql[SQL Server Service :1433]
-	prometheus[Prometheus]
-	grafana[Grafana]
-	alloy[Alloy sur chaque noeud]
-	loki[Loki]
-	tempo[Tempo]
+    frontend[Service frontend<br/>ClusterIP :80]
+    api[Service API<br/>ClusterIP :8080]
+    sql[Service SQL Server<br/>ClusterIP :1433]
+    prometheus[Prometheus]
+    ksm[kube-state-metrics]
+    node_exporter[Node Exporter]
+    alloy[Grafana Alloy<br/>DaemonSet]
+    logs[Logs des pods]
+    loki[Loki]
+    otel[Backend OpenTelemetry<br/>OTLP HTTP :4318]
+    tempo[Tempo<br/>OTLP receiver]
+    grafana[Grafana]
 
     client -->|HTTP /| nginx
     client -->|HTTP /api| nginx
-	nginx --> frontend
-	nginx --> api
-	api -->|requete SQL autorisee| sql
-	prometheus -->|scrape API /metrics| api
-	prometheus -->|metriques Kubernetes| alloy
-	alloy -->|logs| loki
-	alloy -->|traces| tempo
-	grafana --> prometheus
-	grafana --> loki
-	grafana --> tempo
+    nginx --> frontend
+    nginx --> api
+    api -->|TCP 1433| sql
+    api -->|metriques /metrics| prometheus
+    ksm -->|metriques Kubernetes| prometheus
+    node_exporter -->|metriques des noeuds| prometheus
+    logs --> alloy -->|Loki push API| loki
+    otel -->|traces OpenTelemetry| tempo
+    grafana --> prometheus
+    grafana --> loki
+    grafana --> tempo
 ```
 
-Les NetworkPolicies reduisent les flux entrants et sortants de l'API. Les communications representees dans le diagramme correspondent aux flux declares dans les manifests : Ingress vers API, Prometheus vers API, API vers SQL Server, resolution DNS et export des traces vers Tempo.
+Les NetworkPolicies reduisent les flux entrants et sortants de l'API. Prometheus collecte les metriques de l'API, de kube-state-metrics et de Node Exporter. Alloy collecte les logs des pods et les envoie a Loki. Le backend instrumente avec OpenTelemetry envoie ses traces directement a Tempo via OTLP HTTP sur le port `4318`.
 
 Le point d'entree externe est le Service du **NGINX Ingress Controller**, configure dans l'environnement Kubernetes avec `type: LoadBalancer`. La ressource `Ingress` `bank-complaint-ingress` ne porte pas elle-meme le type `LoadBalancer` : elle definit les regles de routage vers les Services internes `frontend` et `api`, qui restent de type `ClusterIP`.
 
@@ -783,7 +868,8 @@ flowchart TB
     api_svc --> api_dep --> api_rs --> api_pods
     hpa -. scales 2 to 5 .-> api_dep
     api_pods --> uploads
-    api_pods -->|TCP 1433| sql_svc --> sql_dep --> sql_pod --> sql_pvc
+    api_pods -->|TCP 1433| sql_svc
+    sql_svc --> sql_dep --> sql_pod --> sql_pvc
     config -. injects configuration .-> api_pods
     policies -. restricts traffic .-> application
 
@@ -796,6 +882,38 @@ flowchart TB
     grafana --> loki
     grafana --> tempo
 ```
+
+### Simple Application Cluster View
+
+This diagram shows only the actual components deployed in the `bank-complaint` namespace, without detailing the intermediate Kubernetes objects:
+
+```mermaid
+flowchart LR
+    user[User]
+    loadbalancer[NGINX Ingress Controller<br/>LoadBalancer Service]
+    ingress[Ingress<br/>bank-complaint.local]
+    frontend[Service frontend<br/>ClusterIP :80]
+    frontend_pods[2 frontend Pods]
+    api[Service api<br/>ClusterIP :8080]
+    api_pods[2 .NET 9 API Pods]
+    sql[Service sqlserver<br/>ClusterIP :1433]
+    sql_pod[1 SQL Server 2019 Pod]
+    sql_storage[PVC sqlserver-pvc<br/>SQL Server data]
+    uploads_storage[PVC api-uploads<br/>API uploads]
+    monitoring[Monitoring<br/>Prometheus, Grafana, Loki, Tempo, Alloy]
+
+    user --> loadbalancer --> ingress
+    ingress -->|/| frontend
+    ingress -->|/api| api
+    frontend --> frontend_pods
+    api --> api_pods
+    api_pods -->|TCP 1433| sql --> sql_pod
+    sql_pod --> sql_storage
+    api_pods --> uploads_storage
+    api_pods -. metrics, logs, traces .-> monitoring
+```
+
+This summarizes the current topology: **2 frontend Pods**, **2 API Pods** and **1 SQL Server Pod**. The HPA can increase the number of API Pods up to 5 according to CPU usage; the two API Pods represent the initial Deployment state.
 
 ### Observability Flow Details
 
@@ -853,6 +971,41 @@ Kubernetes Cluster
     ├── kube-state-metrics
     └── Node Exporter DaemonSet
 ```
+
+In Kubernetes, each object has a specific responsibility:
+
+| Object | Role in this project |
+| --- | --- |
+| Ingress | Receives HTTP requests and selects the target Service according to `/` or `/api`. |
+| Service | Provides a stable network address for Pods. Application Services use `ClusterIP`. |
+| Deployment | Declares the desired replica count and manages Pod updates. |
+| ReplicaSet | Creates and maintains the number of Pods requested by a Deployment. |
+| Pod | Runs the frontend, API or SQL Server container. |
+| PVC | Requests persistent storage for SQL Server or API uploads. |
+| HPA | Automatically adjusts API Pods between 2 and 5 according to CPU usage. |
+
+```mermaid
+flowchart TB
+    ingress[Ingress bank-complaint-ingress]
+    frontend_service[Service frontend<br/>ClusterIP :80]
+    frontend_deployment[Deployment frontend<br/>2 replicas]
+    frontend_pods[2 frontend Pods]
+    api_service[Service api<br/>ClusterIP :8080]
+    api_deployment[Deployment api<br/>2 initial replicas]
+    api_pods[2 API Pods]
+    sql_service[Service sqlserver<br/>ClusterIP :1433]
+    sql_deployment[Deployment sqlserver<br/>1 replica]
+    sql_pod[1 SQL Server Pod]
+    sql_pvc[PVC sqlserver-pvc]
+    uploads_pvc[PVC api-uploads]
+
+    ingress -->|/| frontend_service --> frontend_deployment --> frontend_pods
+    ingress -->|/api| api_service --> api_deployment --> api_pods
+    api_pods -->|SQL connection| sql_service --> sql_deployment --> sql_pod --> sql_pvc
+    api_pods --> uploads_pvc
+```
+
+Read the diagram from top to bottom: the Ingress routes to a Service, the Service targets a Deployment, the Deployment manages Pods, and Pods use PVCs when persistent storage is required. The frontend and API start with 2 Pods each, SQL Server has 1 Pod, and the API can scale up to 5 Pods through the HPA.
 
 ## Kubernetes Architecture and Routing
 
