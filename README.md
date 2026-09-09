@@ -144,6 +144,25 @@ flowchart TB
     tempo --> obs_storage
 ```
 
+> **Affichage des diagrammes :** GitHub interprete les blocs `mermaid` automatiquement. L'aperçu Markdown natif de VS Code peut afficher le code Mermaid au lieu du dessin ; dans ce cas, utiliser l'extension *Markdown Preview Mermaid Support* ou consulter le README sur GitHub.
+
+### Vue texte de secours
+
+```text
+Cluster Kubernetes
+|
+|-- NGINX Ingress Controller (LoadBalancer)
+|   `-- Ingress bank-complaint.local
+|       |-- /     -> Service frontend -> 2 Pods frontend
+|       `-- /api  -> Service api      -> 2 Pods API
+|                                      |-- PVC api-uploads
+|                                      `-- SQL Server Service
+|                                          `-- 1 Pod SQL Server
+|                                              `-- PVC sqlserver-pvc
+|
+`-- Monitoring: Prometheus, Grafana, Loki, Tempo, Alloy
+```
+
 ### Vue simple du cluster applicatif
 
 Ce schema montre uniquement les composants reels deployes dans le namespace `bank-complaint`, sans detailler les objets Kubernetes intermediaires :
@@ -926,6 +945,25 @@ flowchart LR
 ```
 
 This summarizes the current topology: **2 frontend Pods**, **2 API Pods** and **1 SQL Server Pod**. The HPA can increase the number of API Pods up to 5 according to CPU usage; the two API Pods represent the initial Deployment state.
+
+> **Diagram display:** GitHub renders `mermaid` blocks automatically. The native VS Code Markdown preview may show Mermaid source code instead of the diagram; in that case, install the *Markdown Preview Mermaid Support* extension or view the README on GitHub.
+
+### Text fallback view
+
+```text
+Kubernetes Cluster
+|
+|-- NGINX Ingress Controller (LoadBalancer)
+|   `-- Ingress bank-complaint.local
+|       |-- /     -> frontend Service -> 2 frontend Pods
+|       `-- /api  -> api Service      -> 2 API Pods
+|                                      |-- api-uploads PVC
+|                                      `-- SQL Server Service
+|                                          `-- 1 SQL Server Pod
+|                                              `-- sqlserver-pvc
+|
+`-- Monitoring: Prometheus, Grafana, Loki, Tempo, Alloy
+```
 
 ### Observability Flow Details
 
