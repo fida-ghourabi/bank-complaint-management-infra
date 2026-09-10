@@ -164,10 +164,11 @@ flowchart LR
     ingress -->|/api| api
     frontend --> frontend_pods
     api --> api_pods
-    api_pods -->|TCP 1433| sql --> sql_pod
+    api_pods -->|"TCP 1433"| sql
+    sql --> sql_pod
     sql_pod --> sql_storage
     api_pods --> uploads_storage
-    api_pods -. metriques, logs, traces .-> monitoring
+    api_pods -. "metriques, logs, traces" .-> monitoring
 ```
 
 Cette vue resume la topologie actuelle : **2 Pods frontend**, **2 Pods API** et **1 Pod SQL Server**. Le HPA peut augmenter le nombre de Pods API jusqu'a 5 selon l'utilisation CPU ; les deux Pods API representent donc l'etat initial declare par le Deployment.
@@ -176,22 +177,24 @@ Cette vue resume la topologie actuelle : **2 Pods frontend**, **2 Pods API** et 
 
 ```mermaid
 flowchart LR
-    api[Backend .NET 9<br/>OpenTelemetry SDK]
-    otlp[OTLP HTTP<br/>tempo.monitoring.svc:4318]
-    tempo[Tempo distributor<br/>OTLP receiver]
-    prometheus[Prometheus]
-    ksm[kube-state-metrics]
-    node_exporter[Node Exporter]
-    alloy[Grafana Alloy<br/>DaemonSet]
-    logs[Logs des pods<br/>/var/log/containers]
-    loki[Loki]
-    grafana[Grafana]
+    api["Backend .NET 9<br/>OpenTelemetry SDK"]
+    otlp["OTLP HTTP<br/>tempo.monitoring.svc:4318"]
+    tempo["Tempo distributor<br/>OTLP receiver"]
+    prometheus["Prometheus"]
+    ksm["kube-state-metrics"]
+    node_exporter["Node Exporter"]
+    alloy["Grafana Alloy<br/>DaemonSet"]
+    logs["Logs des pods<br/>/var/log/containers"]
+    loki["Loki"]
+    grafana["Grafana"]
 
-    api -->|metriques /metrics| prometheus
-    ksm -->|metriques Kubernetes| prometheus
-    node_exporter -->|metriques des noeuds| prometheus
-    api -->|traces OTLP| otlp --> tempo
-    logs --> alloy -->|Loki push API| loki
+    api -->|"metriques /metrics"| prometheus
+    ksm -->|"metriques Kubernetes"| prometheus
+    node_exporter -->|"metriques des noeuds"| prometheus
+    api -->|"traces OTLP"| otlp
+    otlp --> tempo
+    logs --> alloy
+    alloy -->|"Loki push API"| loki
     grafana --> prometheus
     grafana --> tempo
     grafana --> loki
@@ -291,12 +294,13 @@ flowchart LR
     client -->|HTTP /api| nginx
     nginx --> frontend
     nginx --> api
-    api -->|TCP 1433| sql
-    api -->|metriques /metrics| prometheus
-    ksm -->|metriques Kubernetes| prometheus
-    node_exporter -->|metriques des noeuds| prometheus
-    logs --> alloy -->|Loki push API| loki
-    otel -->|traces OpenTelemetry| tempo
+    api -->|"TCP 1433"| sql
+    api -->|"metriques /metrics"| prometheus
+    ksm -->|"metriques Kubernetes"| prometheus
+    node_exporter -->|"metriques des noeuds"| prometheus
+    logs --> alloy
+    alloy -->|"Loki push API"| loki
+    otel -->|"traces OpenTelemetry"| tempo
     grafana --> prometheus
     grafana --> loki
     grafana --> tempo
@@ -910,10 +914,11 @@ flowchart LR
     ingress -->|/api| api
     frontend --> frontend_pods
     api --> api_pods
-    api_pods -->|TCP 1433| sql --> sql_pod
+    api_pods -->|"TCP 1433"| sql
+    sql --> sql_pod
     sql_pod --> sql_storage
     api_pods --> uploads_storage
-    api_pods -. metrics, logs, traces .-> monitoring
+    api_pods -. "metrics, logs, traces" .-> monitoring
 ```
 
 This summarizes the current topology: **2 frontend Pods**, **2 API Pods** and **1 SQL Server Pod**. The HPA can increase the number of API Pods up to 5 according to CPU usage; the two API Pods represent the initial Deployment state.
@@ -922,22 +927,24 @@ This summarizes the current topology: **2 frontend Pods**, **2 API Pods** and **
 
 ```mermaid
 flowchart LR
-    api[.NET 9 Backend<br/>OpenTelemetry SDK]
-    otlp[OTLP HTTP<br/>tempo.monitoring.svc:4318]
-    tempo[Tempo distributor<br/>OTLP receiver]
-    prometheus[Prometheus]
-    ksm[kube-state-metrics]
-    node_exporter[Node Exporter]
-    alloy[Grafana Alloy<br/>DaemonSet]
-    logs[Pod logs<br/>/var/log/containers]
-    loki[Loki]
-    grafana[Grafana]
+    api[".NET 9 Backend<br/>OpenTelemetry SDK"]
+    otlp["OTLP HTTP<br/>tempo.monitoring.svc:4318"]
+    tempo["Tempo distributor<br/>OTLP receiver"]
+    prometheus["Prometheus"]
+    ksm["kube-state-metrics"]
+    node_exporter["Node Exporter"]
+    alloy["Grafana Alloy<br/>DaemonSet"]
+    logs["Pod logs<br/>/var/log/containers"]
+    loki["Loki"]
+    grafana["Grafana"]
 
-    api -->|/metrics| prometheus
-    ksm -->|Kubernetes metrics| prometheus
-    node_exporter -->|node metrics| prometheus
-    api -->|OTLP traces| otlp --> tempo
-    logs --> alloy -->|Loki push API| loki
+    api -->|"/metrics"| prometheus
+    ksm -->|"Kubernetes metrics"| prometheus
+    node_exporter -->|"node metrics"| prometheus
+    api -->|"OTLP traces"| otlp
+    otlp --> tempo
+    logs --> alloy
+    alloy -->|"Loki push API"| loki
     grafana --> prometheus
     grafana --> tempo
     grafana --> loki
@@ -1033,12 +1040,13 @@ flowchart LR
     client -->|HTTP /api| nginx
     nginx --> frontend
     nginx --> api
-    api -->|TCP 1433| sql
-    api -->|/metrics| prometheus
-    ksm -->|Kubernetes metrics| prometheus
-    node_exporter -->|Node metrics| prometheus
-    logs --> alloy -->|Loki push API| loki
-    otel -->|OpenTelemetry traces| tempo
+    api -->|"TCP 1433"| sql
+    api -->|"/metrics"| prometheus
+    ksm -->|"Kubernetes metrics"| prometheus
+    node_exporter -->|"Node metrics"| prometheus
+    logs --> alloy
+    alloy -->|"Loki push API"| loki
+    otel -->|"OpenTelemetry traces"| tempo
     grafana --> prometheus
     grafana --> loki
     grafana --> tempo
