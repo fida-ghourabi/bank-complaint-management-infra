@@ -1,6 +1,6 @@
-# Bank Complaint Management - Cloud Native Infrastructure
+# Bank Complaint Management DevOps Infrastructure
 
-> Plateforme Kubernetes et GitOps pour le deploiement, la securisation et l'observabilite d'une application de gestion des reclamations bancaires.
+> Plateforme DevOps Kubernetes, GitOps, CI/CD et observabilite pour le deploiement, la securisation et la supervision d'une application de gestion des reclamations bancaires.
 
 ## Presentation du projet
 
@@ -756,9 +756,9 @@ kubectl rollout status deployment/frontend -n bank-complaint
 
 ---
 
-# Bank Complaint Management - Cloud Native Infrastructure (English)
+# Bank Complaint Management DevOps Infrastructure (English)
 
-> Kubernetes and GitOps platform for deploying, securing and observing a banking complaint management application.
+> DevOps platform based on Kubernetes, GitOps, CI/CD and observability for deploying, securing and operating a banking complaint management application.
 
 ## Project Overview
 
