@@ -101,7 +101,6 @@ flowchart TB
             loki[Loki<br/>logs]
             tempo[Tempo<br/>traces OTLP]
             grafana[Grafana<br/>dashboards]
-            obs_storage[PVC observabilite]
         end
 
         subgraph nodes[Noeuds Kubernetes]
@@ -139,28 +138,6 @@ flowchart TB
     grafana --> prometheus
     grafana --> loki
     grafana --> tempo
-    prometheus --> obs_storage
-    loki --> obs_storage
-    tempo --> obs_storage
-```
-
-> **Affichage des diagrammes :** GitHub interprete les blocs `mermaid` automatiquement. L'aperçu Markdown natif de VS Code peut afficher le code Mermaid au lieu du dessin ; dans ce cas, utiliser l'extension *Markdown Preview Mermaid Support* ou consulter le README sur GitHub.
-
-### Vue texte de secours
-
-```text
-Cluster Kubernetes
-|
-|-- NGINX Ingress Controller (LoadBalancer)
-|   `-- Ingress bank-complaint.local
-|       |-- /     -> Service frontend -> 2 Pods frontend
-|       `-- /api  -> Service api      -> 2 Pods API
-|                                      |-- PVC api-uploads
-|                                      `-- SQL Server Service
-|                                          `-- 1 Pod SQL Server
-|                                              `-- PVC sqlserver-pvc
-|
-`-- Monitoring: Prometheus, Grafana, Loki, Tempo, Alloy
 ```
 
 ### Vue simple du cluster applicatif
@@ -561,12 +538,12 @@ Les workflows utilisent les variables et secrets suivants :
 │   ├── namespace/          # Namespace applicatif
 │   ├── networkpolicy/      # Politiques reseau
 │   └── sqlserver/          # Base de donnees et stockage persistant
-├── backup-k8s/             # Copie de manifests conservee comme sauvegarde
+├
 ├── docker-compose.yml      # Execution locale de l'ensemble applicatif
 └── README.md               # Documentation du projet
 ```
 
-Le repertoire `k8s/` est la source utilisee par les Applications Argo CD. `backup-k8s/` est conserve comme sauvegarde et n'est pas reference par les Applications declarees dans `argocd/apps/`.
+Le repertoire `k8s/` est la source utilisee par les Applications Argo CD.
 
 ## Environnements de travail et d'execution
 
@@ -702,10 +679,6 @@ Avant de laisser Argo CD synchroniser les workloads, creer les Secrets attendus 
 - `sqlserver-secret` dans `bank-complaint` pour le mot de passe SQL Server.
 
 Les valeurs de ces Secrets ne doivent pas etre commitees en clair dans Git. Les noms et les cles attendus sont definis dans les manifests `k8s/api/`, `k8s/sqlserver/` et les exemples disponibles dans `k8s/examples/`.
-
-### Environnements applicatifs declares
-
-Le repository contient une execution locale et une cible Kubernetes synchronisee sur la branche `main`. Il ne contient pas de dossiers ou de valeurs separes pour `development`, `staging` et `production`. Les differences d'environnement sont donc gerees par la configuration du cluster, les Secrets, les ConfigMaps, les StorageClasses et les services Kubernetes fournis par la plateforme cible.
 
 ## Execution locale avec Docker Compose
 
@@ -880,7 +853,6 @@ flowchart TB
             loki[Loki<br/>logs]
             tempo[Tempo<br/>OTLP traces]
             grafana[Grafana<br/>dashboards]
-            obs_storage[Observability PVCs]
         end
     end
 
@@ -945,25 +917,6 @@ flowchart LR
 ```
 
 This summarizes the current topology: **2 frontend Pods**, **2 API Pods** and **1 SQL Server Pod**. The HPA can increase the number of API Pods up to 5 according to CPU usage; the two API Pods represent the initial Deployment state.
-
-> **Diagram display:** GitHub renders `mermaid` blocks automatically. The native VS Code Markdown preview may show Mermaid source code instead of the diagram; in that case, install the *Markdown Preview Mermaid Support* extension or view the README on GitHub.
-
-### Text fallback view
-
-```text
-Kubernetes Cluster
-|
-|-- NGINX Ingress Controller (LoadBalancer)
-|   `-- Ingress bank-complaint.local
-|       |-- /     -> frontend Service -> 2 frontend Pods
-|       `-- /api  -> api Service      -> 2 API Pods
-|                                      |-- api-uploads PVC
-|                                      `-- SQL Server Service
-|                                          `-- 1 SQL Server Pod
-|                                              `-- sqlserver-pvc
-|
-`-- Monitoring: Prometheus, Grafana, Loki, Tempo, Alloy
-```
 
 ### Observability Flow Details
 
@@ -1057,6 +1010,151 @@ flowchart TB
 
 Read the diagram from top to bottom: the Ingress routes to a Service, the Service targets a Deployment, the Deployment manages Pods, and Pods use PVCs when persistent storage is required. The frontend and API start with 2 Pods each, SQL Server has 1 Pod, and the API can scale up to 5 Pods through the HPA.
 
+### Network and Observability Flow
+
+```mermaid
+flowchart LR
+    client[Client]
+    nginx[NGINX Ingress Controller<br/>LoadBalancer Service]
+    frontend[Frontend Service<br/>ClusterIP :80]
+    api[API Service<br/>ClusterIP :8080]
+    sql[SQL Server Service<br/>ClusterIP :1433]
+    prometheus[Prometheus]
+    ksm[kube-state-metrics]
+    node_exporter[Node Exporter]
+    alloy[Grafana Alloy<br/>DaemonSet]
+    logs[Pod logs]
+    loki[Loki]
+    otel[Backend OpenTelemetry<br/>OTLP HTTP :4318]
+    tempo[Tempo<br/>OTLP receiver]
+    grafana[Grafana]
+
+    client -->|HTTP /| nginx
+    client -->|HTTP /api| nginx
+    nginx --> frontend
+    nginx --> api
+    api -->|TCP 1433| sql
+    api -->|/metrics| prometheus
+    ksm -->|Kubernetes metrics| prometheus
+    node_exporter -->|Node metrics| prometheus
+    logs --> alloy -->|Loki push API| loki
+    otel -->|OpenTelemetry traces| tempo
+    grafana --> prometheus
+    grafana --> loki
+    grafana --> tempo
+```
+
+NetworkPolicies restrict the API traffic. Prometheus collects API, Kubernetes and node metrics. Alloy collects Pod logs and sends them to Loki. The OpenTelemetry-instrumented backend sends traces directly to Tempo through OTLP HTTP on port `4318`.
+
+### Request Flow
+
+1. The user accesses `bank-complaint.local` through NGINX Ingress.
+2. The `/` path is routed to the frontend Service.
+3. The `/api` path is routed to the API Service.
+4. The API communicates with SQL Server over the internal cluster network.
+5. Prometheus collects metrics exposed by the API and Kubernetes components.
+6. Grafana provides an operational view of the collected metrics, logs and traces.
+
+## Overview
+
+The deployed architecture is organized into three main namespaces:
+
+- `bank-complaint`: frontend, backend API, SQL Server and application Services;
+- `monitoring`: Prometheus, Grafana, Loki, Tempo, Alloy, kube-state-metrics and Node Exporter;
+- `argocd`: Argo CD Applications that declare Git sources and Kubernetes destinations.
+
+Application routing is provided by NGINX Ingress:
+
+| Route | Service | Port |
+| --- | --- | --- |
+| `http://bank-complaint.local/` | frontend | 80 |
+| `http://bank-complaint.local/api` | api | 8080 |
+
+The NGINX Ingress Controller Service uses `LoadBalancer` for external access. The application Services use `ClusterIP` and are not exposed directly.
+
+## Kubernetes Architecture
+
+### Application Components
+
+- **Frontend**: `frontend` Deployment with 2 replicas and an image published to GHCR;
+- **Backend**: `api` Deployment with 2 initial replicas and an image published to GHCR;
+- **SQL Server**: SQL Server 2019 Deployment with 1 replica and persistent storage;
+- **Upload storage**: `api-uploads` PersistentVolumeClaim mounted by the backend;
+- **External exposure**: NGINX Ingress Controller Service of type `LoadBalancer`;
+- **Routing**: `bank-complaint-ingress` routes `/` to the frontend and `/api` to the API.
+
+The application Services are `ClusterIP` Services. The LoadBalancer Service belongs to the NGINX Ingress Controller, while the Ingress resource defines the HTTP routing rules.
+
+The Deployments define resource requests and limits and use Kubernetes probes to control startup, readiness and liveness. The API and frontend run multiple replicas, while SQL Server uses one replica with persistent storage.
+
+### Kubernetes Security
+
+The manifests apply the following controls:
+
+- non-root execution for application containers;
+- disabled privilege escalation and dropped Linux capabilities;
+- disabled automatic ServiceAccount token mounting where it is not required;
+- `ghcr-secret` for pulling private images from GHCR;
+- ConfigMaps for non-sensitive configuration and Secrets for sensitive values;
+- NetworkPolicies restricting traffic between the Ingress, API, SQL Server, DNS and observability components.
+
+Sensitive values must be managed through Kubernetes Secrets and must not be committed in plain text.
+
+### Observability
+
+The `monitoring` namespace contains:
+
+- **Prometheus** for metrics collection;
+- **Grafana** for dashboards;
+- **Loki** for logs;
+- **Tempo** for traces;
+- **Grafana Alloy** for Kubernetes log collection and observability forwarding;
+- **kube-state-metrics** for Kubernetes object metrics;
+- **Node Exporter** for node metrics.
+
+The API exposes metrics for Prometheus on port `8080` and path `/metrics`. The backend sends OpenTelemetry traces directly to Tempo through OTLP HTTP on port `4318`, while Alloy collects Kubernetes pod logs and sends them to Loki.
+
+## Technical Decisions and Strengths
+
+### Declarative and Auditable Deployments
+
+The desired cluster state is defined in YAML and versioned in Git. Every infrastructure change is traceable in the repository history and can be reviewed before synchronization.
+
+### Clear Separation of Responsibilities
+
+The application repositories build and publish images. This repository defines how those images run in Kubernetes. Argo CD reconciles Git with the cluster, reducing manual changes and simplifying troubleshooting.
+
+### Version Traceability
+
+The workflows use the commit SHA as the image tag in Kubernetes Deployments. A deployed version can therefore be linked to an exact source commit, supporting incident analysis and rollback.
+
+### Availability and Resource Governance
+
+The API and frontend run with two replicas. Resource requests, limits and probes help Kubernetes schedule workloads and route traffic only to ready Pods. The API HPA can scale from 2 to 5 replicas according to CPU usage.
+
+### Defense in Depth
+
+Non-root identities, restricted capabilities, disabled privilege escalation, Kubernetes Secrets, private image credentials and NetworkPolicies work together to reduce the attack surface.
+
+### Reproducible Operations
+
+The same manifests can be reviewed, validated and synchronized by Argo CD. Docker Compose also provides local execution of the frontend, API and SQL Server components.
+
+## Component Responsibilities
+
+| Component | Responsibility |
+| --- | --- |
+| Frontend | User interface exposed through the `frontend` Service |
+| API | Backend logic, health endpoint, metrics and database access |
+| SQL Server | Relational application persistence |
+| NGINX Ingress | External routing to the frontend and API |
+| Argo CD | Git-to-Kubernetes synchronization, pruning and self-healing |
+| Prometheus | Metrics collection |
+| Grafana | Visualization and data exploration |
+| Loki | Log storage and querying |
+| Tempo | Trace storage |
+| Alloy | Kubernetes log collection and observability forwarding |
+
 ## Kubernetes Architecture and Routing
 
 - **Frontend**: `frontend` Deployment with 2 replicas and an image published to GHCR.
@@ -1115,6 +1213,17 @@ argocd/root-application.yaml
 
 The root Application loads the Applications declared in `argocd/apps/`. These Applications target the relevant Kubernetes directories and enable automated synchronization, pruning and self-healing.
 
+The synchronization waves deploy namespaces and foundation components before the frontend and backend workloads.
+
+To install the root Application in a cluster that already has Argo CD:
+
+```bash
+kubectl apply -f argocd/namespace.yaml
+kubectl apply -f argocd/root-application.yaml
+```
+
+The cluster must already provide the external components referenced by the manifests, including an NGINX Ingress Controller and the CRDs required by Argo CD.
+
 ## CI/CD Image Delivery
 
 The frontend and backend repositories each contain a GitHub Actions workflow. Pull requests to `main` restore dependencies, build the project and run tests. Pushes to `main` additionally build and publish the Docker image, update this infrastructure repository and trigger the Argo CD synchronization flow.
@@ -1150,6 +1259,15 @@ Argo CD detects the change and synchronizes Kubernetes
 
 The image SHA tag links a deployed version to an exact source commit, which improves traceability and supports controlled rollback.
 
+The workflows use the following variables and secrets:
+
+| Item | Purpose |
+| --- | --- |
+| `GITHUB_TOKEN` | Authenticate to GHCR and publish images |
+| `INFRA_REPO_TOKEN` | Clone and push changes to this repository from the application repositories |
+| `REGISTRY` | Container registry, configured as `ghcr.io` |
+| `INFRA_REPO` | `fida-ghourabi/bank-complaint-management-infra` |
+
 ## Repository Structure
 
 ```text
@@ -1163,12 +1281,12 @@ The image SHA tag links a deployed version to an exact source commit, which impr
 │   ├── namespace/          # Application namespace
 │   ├── networkpolicy/      # Network policies
 │   └── sqlserver/          # Database and persistent storage
-├── backup-k8s/             # Backup copy of manifests
+├
 ├── docker-compose.yml      # Local execution of the application stack
 └── README.md               # Project documentation
 ```
 
-The `k8s/` directory is the source used by the Argo CD Applications. `backup-k8s/` is kept as a backup and is not referenced by the Applications in `argocd/apps/`.
+The `k8s/` directory is the source used by the Argo CD Applications.
 
 ## Work and Runtime Environments
 
@@ -1188,6 +1306,10 @@ The local environment requires Git, Docker and Docker Compose. `docker-compose.y
 ### Kubernetes environment
 
 The target environment requires a Kubernetes cluster, Argo CD in `argocd`, the `bank-complaint` and `monitoring` namespaces, an NGINX Ingress Controller exposed through a `LoadBalancer` Service, a StorageClass, GHCR access through `ghcr-secret` and a working Metrics Server for the API HPA.
+
+### Declared application environments
+
+This repository contains a local execution environment and a Kubernetes target synchronized from the `main` branch. It does not contain separate `development`, `staging` and `production` directories or values. Environment differences are managed through cluster configuration, Secrets, ConfigMaps, StorageClasses and platform services.
 
 ## Local Cluster Creation with Minikube
 
@@ -1302,6 +1424,8 @@ Start the local stack:
 docker compose up -d
 ```
 
+The declared local ports are `4200` for the frontend, `8080` for the API and `1433` for SQL Server.
+
 ## Verification Commands
 
 ```bash
@@ -1309,9 +1433,30 @@ kubectl get pods -n bank-complaint
 kubectl get pods -n monitoring
 kubectl get ingress -n bank-complaint
 kubectl get applications -n argocd
+kubectl describe application bank-complaint-frontend -n argocd
+kubectl describe application bank-complaint-backend -n argocd
 kubectl rollout status deployment/api -n bank-complaint
 kubectl rollout status deployment/frontend -n bank-complaint
 ```
+
+## Prerequisites
+
+- a Kubernetes cluster accessible through configured `kubectl`;
+- Argo CD installed in the cluster for GitOps;
+- an NGINX Ingress Controller exposed through a `LoadBalancer` Service;
+- Calico or another CNI compatible with Kubernetes NetworkPolicies;
+- a StorageClass compatible with the PersistentVolumeClaims;
+- access to GHCR and the Kubernetes `ghcr-secret`;
+- application and SQL Server Secrets created in the expected namespaces.
+
+## Project Principles
+
+- **Infrastructure as Code**: Kubernetes resources are versioned;
+- **GitOps**: Argo CD synchronizes cluster state from Git;
+- **Traceability**: application images use commit SHA tags;
+- **Resilience**: the API and frontend run multiple replicas;
+- **Secure defaults**: non-root containers, restricted privileges and controlled network flows;
+- **Observability**: metrics, logs and traces are part of the platform.
 
 ## Project Strengths
 
