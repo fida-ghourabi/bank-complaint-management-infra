@@ -378,7 +378,9 @@ Le namespace `monitoring` contient les composants suivants :
 
 L'API est configuree pour etre scrapee par Prometheus sur le port `8080` et le chemin `/metrics`.
 
-Cette stack fournit les briques necessaires pour suivre la sante des workloads, les metriques des noeuds, l'etat des objets Kubernetes, les logs et les traces. Elle permet de reduire le temps de diagnostic et d'observer le comportement de la plateforme depuis Grafana.
+Les alertes de supervision sont configurees directement depuis l'interface web de Grafana a partir des donnees Prometheus.
+
+Cette stack fournit les briques necessaires pour suivre la sante des workloads, les metriques des noeuds, l'etat des objets Kubernetes, les logs, les traces et les alertes. Elle permet de reduire le temps de diagnostic et d'observer le comportement de la plateforme depuis Grafana.
 
 ## Decisions techniques et points forts
 
@@ -1121,6 +1123,8 @@ The `monitoring` namespace contains:
 - **Node Exporter** for node metrics.
 
 The API exposes metrics for Prometheus on port `8080` and path `/metrics`. The backend sends OpenTelemetry traces directly to Tempo through OTLP HTTP on port `4318`, while Alloy collects Kubernetes pod logs and sends them to Loki.
+
+Monitoring alerts are configured directly through the Grafana web interface using Prometheus data.
 
 ## Technical Decisions and Strengths
 
