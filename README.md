@@ -1,5 +1,16 @@
 # Bank Complaint Management DevOps Infrastructure
 
+**Français** | [English](#english-version)
+
+![Kubernetes](https://img.shields.io/badge/Kubernetes-Infra-326CE5?logo=kubernetes&logoColor=white)
+![Argo CD](https://img.shields.io/badge/Argo%20CD-GitOps-EF7B4D?logo=argo&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Containerization-2496ED?logo=docker&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-E6522C?logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-Dashboards-F46800?logo=grafana&logoColor=white)
+![Loki](https://img.shields.io/badge/Loki-Logs-F46800?logo=grafana&logoColor=white)
+![Tempo](https://img.shields.io/badge/Tempo-Traces-F46800?logo=grafana&logoColor=white)
+
 > Plateforme DevOps Kubernetes, GitOps, CI/CD et observabilite pour le deploiement, la securisation et la supervision d'une application de gestion des reclamations bancaires.
 
 ## Presentation du projet
@@ -758,7 +769,11 @@ kubectl rollout status deployment/frontend -n bank-complaint
 
 ---
 
+<a id="english-version"></a>
+
 # Bank Complaint Management DevOps Infrastructure (English)
+
+[Français](#bank-complaint-management-devops-infrastructure)
 
 > DevOps platform based on Kubernetes, GitOps, CI/CD and observability for deploying, securing and operating a banking complaint management application.
 
